@@ -2,6 +2,120 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 
+// ========== 멘토 모집글 관련 API ==========
+
+// 모든 멘토 모집글 조회
+router.get('/mentors/posts', async (req, res) => {
+  try {
+    const [posts] = await pool.query(
+      `SELECT p.*, m.name as user_name, m.profile_image
+       FROM MentorPost p
+       JOIN Member m ON p.member_id = m.member_id
+       ORDER BY p.created_at DESC`
+    );
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 멘토 모집글 작성
+router.post('/mentors/posts', async (req, res) => {
+  try {
+    const { member_id, title, description, career, specialty, mentor_contact } = req.body;
+
+    // 이미 작성한 글이 있는지 확인
+    const [existing] = await pool.query(
+      'SELECT * FROM MentorPost WHERE member_id = ?',
+      [member_id]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: '이미 등록된 모집글이 있습니다.' });
+    }
+
+    const [result] = await pool.query(
+      'INSERT INTO MentorPost (member_id, title, description, career, specialty, mentor_contact) VALUES (?, ?, ?, ?, ?, ?)',
+      [member_id, title, description, career, specialty, mentor_contact]
+    );
+
+    res.status(201).json({
+      post_id: result.insertId,
+      message: '멘토 모집글이 등록되었습니다.'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 멘토 모집글 삭제
+router.delete('/mentors/posts/:postId', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM MentorPost WHERE post_id = ?', [req.params.postId]);
+    res.json({ message: '멘토 모집글이 삭제되었습니다.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ========== 멘티 모집글 관련 API ==========
+
+// 모든 멘티 모집글 조회
+router.get('/mentees/posts', async (req, res) => {
+  try {
+    const [posts] = await pool.query(
+      `SELECT p.*, m.name as user_name, m.profile_image
+       FROM MenteePost p
+       JOIN Member m ON p.member_id = m.member_id
+       ORDER BY p.created_at DESC`
+    );
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 멘티 모집글 작성
+router.post('/mentees/posts', async (req, res) => {
+  try {
+    const { member_id, title, description, goal, interest, mentee_contact } = req.body;
+
+    // 이미 작성한 글이 있는지 확인
+    const [existing] = await pool.query(
+      'SELECT * FROM MenteePost WHERE member_id = ?',
+      [member_id]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: '이미 등록된 모집글이 있습니다.' });
+    }
+
+    const [result] = await pool.query(
+      'INSERT INTO MenteePost (member_id, title, description, goal, interest, mentee_contact) VALUES (?, ?, ?, ?, ?, ?)',
+      [member_id, title, description, goal, interest, mentee_contact]
+    );
+
+    res.status(201).json({
+      post_id: result.insertId,
+      message: '멘티 모집글이 등록되었습니다.'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 멘티 모집글 삭제
+router.delete('/mentees/posts/:postId', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM MenteePost WHERE post_id = ?', [req.params.postId]);
+    res.json({ message: '멘티 모집글이 삭제되었습니다.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ========== 매칭 관련 API ==========
+
 // 모든 멘토링 매칭 조회
 router.get('/', async (req, res) => {
   try {

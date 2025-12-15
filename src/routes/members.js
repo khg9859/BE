@@ -62,6 +62,23 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// 회원 프로필 업데이트 (프로필 사진, 자기소개)
+router.put('/:id/profile', async (req, res) => {
+  try {
+    const { profile_image, bio } = req.body;
+    const [result] = await pool.query(
+      'UPDATE Member SET profile_image = ?, bio = ? WHERE member_id = ?',
+      [profile_image, bio, req.params.id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: '회원을 찾을 수 없습니다.' });
+    }
+    res.json({ message: '프로필이 업데이트되었습니다.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 회원 삭제
 router.delete('/:id', async (req, res) => {
   try {

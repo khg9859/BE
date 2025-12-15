@@ -1,26 +1,13 @@
-# Hansung Gym Management System - Backend API
+# ✨ 한성대학교 헬스장 관리 시스템 - Backend
 
-> 한성대학교 헬스장 통합 관리 시스템 백엔드
-> Express.js + MySQL 기반 REST API 서버
-
----
-
-## ✨ 목차
-
-- [프로젝트 개요](#프로젝트-개요)
-- [기술 스택](#기술-스택)
-- [프로젝트 구조](#프로젝트-구조)
-- [설치 및 실행](#설치-및-실행)
-- [API 엔드포인트](#api-엔드포인트)
-- [데이터베이스 설정](#데이터베이스-설정)
-- [환경 변수](#환경-변수)
-- [배포](#배포)
+Express.js + MySQL 기반 REST API 서버
 
 ---
 
 ## ✨ 프로젝트 개요
 
-한성대학교 헬스장 회원 관리, 운동 기록, 식단 관리, 포인트 시스템, 멘토링 매칭 등을 제공하는 RESTful API 서버입니다.
+한성대학교 헬스장 통합 관리 시스템의 백엔드 API 서버입니다.
+회원 관리, 운동 기록, 식단 관리, 포인트 시스템, 멘토링 매칭 등을 제공하는 RESTful API입니다.
 
 ---
 
@@ -31,7 +18,7 @@
 | **Runtime** | Node.js 18+ |
 | **Framework** | Express.js 4.18.2 |
 | **Database** | MySQL 5.7+ / 8.0+ |
-| **ORM/Driver** | MySQL2 (Promise-based) |
+| **Driver** | MySQL2 (Promise-based) |
 | **환경 변수** | dotenv |
 | **CORS** | cors |
 
@@ -94,7 +81,7 @@ cp .env.example .env
 `.env` 파일 수정:
 
 ```env
-PORT=5000
+PORT=5001
 NODE_ENV=development
 
 DB_HOST=localhost
@@ -128,21 +115,21 @@ source sql/insert_class_data.sql;
 
 ### 5. 서버 실행
 
-**개발 모드 (nodemon):**
+개발 모드 (nodemon):
 ```bash
 npm run dev
 ```
 
-**프로덕션 모드:**
+프로덕션 모드:
 ```bash
 npm start
 ```
 
-서버가 실행되면 다음과 같이 표시됩니다:
+서버 실행 확인:
 ```
 ✨ MySQL 데이터베이스 연결 성공!
-✨ 서버가 포트 5000에서 실행 중입니다.
-✨ http://localhost:5000
+✨ 서버가 포트 5001에서 실행 중입니다.
+✨ http://localhost:5001
 ✨ 환경: development
 ```
 
@@ -161,6 +148,7 @@ npm start
 - `GET /api/members/:id` - 특정 회원 조회
 - `POST /api/members` - 회원 생성
 - `PUT /api/members/:id` - 회원 정보 수정
+- `PUT /api/members/:id/profile` - 프로필 업데이트
 - `DELETE /api/members/:id` - 회원 삭제
 
 ### 운동 (Exercises)
@@ -218,11 +206,12 @@ npm start
 
 ### 멘토링 (Mentoring)
 
-- `GET /api/mentoring` - 모든 멘토링 매칭 조회
-- `GET /api/mentoring/member/:memberId` - 회원의 멘토링 정보 조회
-- `GET /api/mentoring/active` - 활성 멘토링 조회
-- `POST /api/mentoring` - 멘토링 매칭 생성
-- `PUT /api/mentoring/:mentoringId/end` - 멘토링 종료
+- `GET /api/mentoring/mentors/posts` - 멘토 모집글 목록
+- `GET /api/mentoring/mentees/posts` - 멘티 모집글 목록
+- `POST /api/mentoring/mentors/posts` - 멘토 모집글 작성
+- `POST /api/mentoring/mentees/posts` - 멘티 모집글 작성
+- `DELETE /api/mentoring/mentors/posts/:id` - 멘토 모집글 삭제
+- `DELETE /api/mentoring/mentees/posts/:id` - 멘티 모집글 삭제
 
 ### 보상 (Rewards)
 
@@ -235,7 +224,7 @@ npm start
 
 ---
 
-## ✨ 데이터베이스 설정
+## ✨ 데이터베이스 스키마
 
 ### 주요 테이블
 
@@ -251,7 +240,8 @@ npm start
 - **Goal** - 목표
 - **Class** - 교양수업
 - **Class_Schedule** - 수업 시간표
-- **Mentoring** - 멘토링 매칭
+- **MentorPost** - 멘토 모집글
+- **MenteePost** - 멘티 모집글
 - **Reward** - 보상 상품
 - **PointExchange** - 포인트 교환 내역
 
@@ -263,7 +253,7 @@ npm start
 
 | 변수 | 설명 | 기본값 |
 |------|------|--------|
-| `PORT` | 서버 포트 | 5000 |
+| `PORT` | 서버 포트 | 5001 |
 | `NODE_ENV` | 실행 환경 | development |
 | `DB_HOST` | MySQL 호스트 | localhost |
 | `DB_PORT` | MySQL 포트 | 3306 |
@@ -309,13 +299,13 @@ npm start
 
 ```bash
 # 서버 상태 확인
-curl http://localhost:5000/health
+curl http://localhost:5001/health
 
 # 모든 회원 조회
-curl http://localhost:5000/api/members
+curl http://localhost:5001/api/members
 
 # 특정 회원 조회
-curl http://localhost:5000/api/members/1
+curl http://localhost:5001/api/members/1
 ```
 
 ### 로그 확인
@@ -332,18 +322,3 @@ curl http://localhost:5000/api/members/1
 ## ✨ 라이선스
 
 이 프로젝트는 교육 목적으로 제작되었습니다.
-
----
-
-## ✨ 개발팀
-
-**Hansung University Gym Team**
-
-- Frontend: [https://github.com/hsugym/FE](https://github.com/hsugym/FE)
-- Backend: [https://github.com/hsugym/BE](https://github.com/hsugym/BE)
-
----
-
-## ✨ 문의
-
-프로젝트 관련 문의: gym@hansung.ac.kr

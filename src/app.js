@@ -24,6 +24,7 @@ app.use((req, res, next) => {
 });
 
 // 라우트 import
+const authRoutes = require('./routes/auth');
 const memberRoutes = require('./routes/members');
 const exerciseRoutes = require('./routes/exercises');
 const dietRoutes = require('./routes/diet');
@@ -35,6 +36,7 @@ const mentoringRoutes = require('./routes/mentoring');
 const rewardRoutes = require('./routes/rewards');
 
 // API 라우트 설정
+app.use('/api/auth', authRoutes);
 app.use('/api/members', memberRoutes);
 app.use('/api/exercises', exerciseRoutes);
 app.use('/api/diet', dietRoutes);
@@ -91,9 +93,9 @@ const startServer = async () => {
 
     // 서버 시작
     app.listen(PORT, () => {
-      console.log(`🚀 서버가 포트 ${PORT}에서 실행 중입니다.`);
-      console.log(`📍 http://localhost:${PORT}`);
-      console.log(`🌍 환경: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`✨ 서버가 포트 ${PORT}에서 실행 중입니다.`);
+      console.log(`✨ http://localhost:${PORT}`);
+      console.log(`✨ 환경: ${process.env.NODE_ENV || 'development'}`);
     });
   } catch (error) {
     console.error('서버 시작 실패:', error);
@@ -104,3 +106,5 @@ const startServer = async () => {
 startServer();
 
 module.exports = app;
+ 
+
