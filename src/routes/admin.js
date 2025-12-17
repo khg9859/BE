@@ -493,4 +493,28 @@ router.post('/remove-duplicates', async (req, res) => {
     }
 });
 
+// Mentoring 테이블 생성
+router.post('/create-mentoring-table', async (req, res) => {
+    try {
+        await pool.query(`
+      CREATE TABLE IF NOT EXISTS Mentoring (
+        mentoring_id INT PRIMARY KEY AUTO_INCREMENT,
+        mentor_id INT NOT NULL,
+        mentee_id INT NOT NULL,
+        status ENUM('PENDING', 'ACTIVE', 'ENDED') DEFAULT 'PENDING',
+        matched_at DATETIME,
+        ended_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (mentor_id) REFERENCES Member(member_id) ON DELETE CASCADE,
+        FOREIGN KEY (mentee_id) REFERENCES Member(member_id) ON DELETE CASCADE,
+        UNIQUE KEY unique_match (mentor_id, mentee_id)
+      )
+    `);
+
+        res.json({ message: 'Mentoring 테이블이 생성되었습니다.' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;
