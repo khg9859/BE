@@ -102,17 +102,10 @@ router.post('/add-points', async (req, res) => {
             });
         }
 
-        // 포인트 추가
+        // 포인트만 추가 (로그는 생략)
         await connection.query(
             'UPDATE `Member` SET total_points = total_points + ? WHERE member_id = ?',
             [points, member_id]
-        );
-
-        // 성취 로그 추가
-        await connection.query(
-            `INSERT INTO AchievementLog (member_id, points_earned, achieved_at) 
-             VALUES (?, ?, NOW())`,
-            [member_id, points]
         );
 
         // 결과 확인
@@ -153,17 +146,11 @@ router.post('/add-points-all', async (req, res) => {
         // 모든 회원 조회
         const [members] = await connection.query('SELECT member_id FROM `Member`');
 
-        // 각 회원에게 포인트 추가
+        // 각 회원에게 포인트 추가 (로그는 생략)
         for (const member of members) {
             await connection.query(
                 'UPDATE `Member` SET total_points = total_points + ? WHERE member_id = ?',
                 [points, member.member_id]
-            );
-
-            await connection.query(
-                `INSERT INTO AchievementLog (member_id, points_earned, achieved_at) 
-                 VALUES (?, ?, NOW())`,
-                [member.member_id, points]
             );
         }
 
