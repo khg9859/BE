@@ -136,6 +136,24 @@ router.delete('/mentees/posts/:postId', async (req, res) => {
 
 // ========== 매칭 관련 API ==========
 
+// 모든 멘토링 매칭 조회 (신청 포함)
+router.get('/applications', async (req, res) => {
+  try {
+    const [applications] = await pool.query(
+      `SELECT m.*,
+              mentor.name as mentor_name,
+              mentee.name as mentee_name
+       FROM Mentoring m
+       JOIN Member mentor ON m.mentor_id = mentor.member_id
+       JOIN Member mentee ON m.mentee_id = mentee.member_id
+       ORDER BY m.created_at DESC`
+    );
+    res.json(applications);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // 모든 멘토링 매칭 조회
 router.get('/', async (req, res) => {
   try {
@@ -174,7 +192,77 @@ router.get('/member/:memberId', async (req, res) => {
   }
 });
 
-// 멘토링 매칭 생성
+// 멘토링 신청 생성 (멘티가 멘토에게 신청)
+router.post('/apply', async (req, res) => {
+  try {
+    const { mentor_id, mentee_id } = req.body;
+
+    // 이미 신청했거나 매칭된 회원인지 확인
+    const [existing] = await pool.query(
+      `SELECT * FROM Mentoring
+       WHERE mentor_id = ? AND mentee_id = ?`,
+      [mentor_id, mentee_id]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: '이미 신청했거나 매칭된 상태입니다.' });
+    }
+
+    const [result] = await pool.query(
+      'INSERT INTO Mentoring (mentor_id, mentee_id, status) VALUES (?, ?, "PENDING")',
+      [mentor_id, mentee_id]
+    );
+
+    res.status(201).json({
+      mentoring_id: result.insertId,
+      message: '멘토에게 신청이 완료되었습니다.'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 멘토링 신청 수락
+router.put('/accept/:mentoringId', async (req, res) => {
+  try {
+    const [mentoring] = await pool.query(
+      'SELECT * FROM Mentoring WHERE mentoring_id = ?',
+      [req.params.mentoringId]
+    );
+
+    if (mentoring.length === 0) {
+      return res.status(404).json({ error: '신청을 찾을 수 없습니다.' });
+    }
+
+    await pool.query(
+      'UPDATE Mentoring SET status = "ACTIVE", matched_at = NOW() WHERE mentoring_id = ?',
+      [req.params.mentoringId]
+    );
+
+    // Member 테이블의 matching_status 업데이트
+    const { mentor_id, mentee_id } = mentoring[0];
+    await pool.query(
+      'UPDATE Member SET matching_status = "MATCHED" WHERE member_id IN (?, ?)',
+      [mentor_id, mentee_id]
+    );
+
+    res.json({ message: '매칭이 완료되었습니다.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 멘토링 신청 거절
+router.delete('/reject/:mentoringId', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM Mentoring WHERE mentoring_id = ?', [req.params.mentoringId]);
+    res.json({ message: '신청이 거절되었습니다.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 멘토링 매칭 생성 (직접 매칭 - 기존 API 유지)
 router.post('/', async (req, res) => {
   try {
     const { mentor_id, mentee_id } = req.body;
