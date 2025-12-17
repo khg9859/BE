@@ -359,8 +359,8 @@ router.post('/init-exercise-food-lists', async (req, res) => {
 
         for (const [name, category, calories, status] of foods) {
             await connection.query(
-                'INSERT INTO FoodList (name, category, calories, status) VALUES (?, ?, ?, ?)',
-                [name, category, calories, status]
+                'INSERT INTO FoodList (name, calories, category, status) VALUES (?, ?, ?, ?)',
+                [name, calories, category, status]
             );
         }
         results.push(`✅ ${foods.length}개의 음식 추가 완료`);
