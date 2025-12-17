@@ -6,7 +6,7 @@ const { pool } = require('../config/database');
 router.get('/', async (req, res) => {
   try {
     const [rewards] = await pool.query(
-      'SELECT * FROM Reward WHERE stock_quantity > 0 ORDER BY required_points'
+      'SELECT * FROM Reward ORDER BY category, required_points'
     );
     res.json(rewards);
   } catch (error) {

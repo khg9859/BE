@@ -23,6 +23,17 @@ router.post('/check-in', async (req, res) => {
 
     const { member_id, attendance_type } = req.body;
 
+    // 0. 오늘 이미 출석했는지 확인
+    const [todayAttendance] = await connection.query(
+      'SELECT * FROM Attendance WHERE member_id = ? AND DATE(attended_at) = CURDATE()',
+      [member_id]
+    );
+
+    if (todayAttendance.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({ error: '오늘은 이미 출석했습니다!' });
+    }
+
     // 1. 출석 기록 추가
     const [result] = await connection.query(
       'INSERT INTO Attendance (member_id, attended_at, attendance_type) VALUES (?, NOW(), ?)',

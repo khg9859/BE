@@ -37,6 +37,7 @@ const rewardRoutes = require('./routes/rewards');
 const badgeRoutes = require('./routes/badges');
 const questRoutes = require('./routes/quests');
 const guideRoutes = require('./routes/guide');
+const healthRoutes = require('./routes/health');
 
 // API 라우트 설정
 app.use('/api/auth', authRoutes);
@@ -52,6 +53,7 @@ app.use('/api/rewards', rewardRoutes);
 app.use('/api/badges', badgeRoutes);
 app.use('/api/quests', questRoutes);
 app.use('/api/guide', guideRoutes);
+app.use('/api/health', healthRoutes);
 
 // 기본 라우트
 app.get('/', (req, res) => {
