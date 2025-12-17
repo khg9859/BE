@@ -417,12 +417,23 @@ router.post('/remove-duplicates', async (req, res) => {
     try {
         console.log('🔧 중복 데이터 제거 시작...');
 
-        // ExerciseList 중복 제거 - 각 운동명의 첫 번째 것만 남기고 나머지 삭제
+        // ExerciseList 중복 제거
         const [exercises] = await connection.query(
-            'SELECT name, MIN(exercise_id) as keep_id FROM ExerciseList GROUP BY name HAVING COUNT(*) > 1'
+            'SELECT name, MIN(exercise_id) as keep_id, GROUP_CONCAT(exercise_id) as all_ids FROM ExerciseList GROUP BY name HAVING COUNT(*) > 1'
         );
 
         for (const exercise of exercises) {
+            const duplicateIds = exercise.all_ids.split(',').filter(id => id != exercise.keep_id);
+
+            // 먼저 ExerciseLog의 외래 키를 keep_id로 업데이트
+            for (const dupId of duplicateIds) {
+                await connection.query(
+                    'UPDATE ExerciseLog SET exercise_id = ? WHERE exercise_id = ?',
+                    [exercise.keep_id, dupId]
+                );
+            }
+
+            // 이제 중복 제거
             const [result] = await connection.query(
                 'DELETE FROM ExerciseList WHERE name = ? AND exercise_id != ?',
                 [exercise.name, exercise.keep_id]
@@ -434,10 +445,21 @@ router.post('/remove-duplicates', async (req, res) => {
 
         // FoodList 중복 제거
         const [foods] = await connection.query(
-            'SELECT name, MIN(food_id) as keep_id FROM FoodList GROUP BY name HAVING COUNT(*) > 1'
+            'SELECT name, MIN(food_id) as keep_id, GROUP_CONCAT(food_id) as all_ids FROM FoodList GROUP BY name HAVING COUNT(*) > 1'
         );
 
         for (const food of foods) {
+            const duplicateIds = food.all_ids.split(',').filter(id => id != food.keep_id);
+
+            // 먼저 DietLog의 외래 키를 keep_id로 업데이트
+            for (const dupId of duplicateIds) {
+                await connection.query(
+                    'UPDATE DietLog SET food_id = ? WHERE food_id = ?',
+                    [food.keep_id, dupId]
+                );
+            }
+
+            // 이제 중복 제거
             const [result] = await connection.query(
                 'DELETE FROM FoodList WHERE name = ? AND food_id != ?',
                 [food.name, food.keep_id]
