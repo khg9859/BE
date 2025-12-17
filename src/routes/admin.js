@@ -89,4 +89,98 @@ router.post('/fix-schema', async (req, res) => {
     }
 });
 
+// 회원에게 포인트 지급 (테스트용)
+router.post('/add-points', async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        const { member_id, points } = req.body;
+
+        if (!member_id || !points) {
+            return res.status(400).json({
+                success: false,
+                error: 'member_id와 points가 필요합니다'
+            });
+        }
+
+        // 포인트 추가
+        await connection.query(
+            'UPDATE `Member` SET total_points = total_points + ? WHERE member_id = ?',
+            [points, member_id]
+        );
+
+        // 성취 로그 추가
+        await connection.query(
+            `INSERT INTO AchievementLog (member_id, source_type, points_earned, achieved_at) 
+             VALUES (?, 'ETC', ?, NOW())`,
+            [member_id, points]
+        );
+
+        // 결과 확인
+        const [members] = await connection.query(
+            'SELECT member_id, name, student_no, total_points FROM `Member` WHERE member_id = ?',
+            [member_id]
+        );
+
+        res.json({
+            success: true,
+            message: `${points}P 지급 완료`,
+            member: members[0]
+        });
+    } catch (error) {
+        console.error('❌ 포인트 지급 실패:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        connection.release();
+    }
+});
+
+// 모든 회원에게 포인트 일괄 지급
+router.post('/add-points-all', async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        const { points } = req.body;
+
+        if (!points) {
+            return res.status(400).json({
+                success: false,
+                error: 'points가 필요합니다'
+            });
+        }
+
+        // 모든 회원 조회
+        const [members] = await connection.query('SELECT member_id FROM `Member`');
+
+        // 각 회원에게 포인트 추가
+        for (const member of members) {
+            await connection.query(
+                'UPDATE `Member` SET total_points = total_points + ? WHERE member_id = ?',
+                [points, member.member_id]
+            );
+
+            await connection.query(
+                `INSERT INTO AchievementLog (member_id, source_type, points_earned, achieved_at) 
+                 VALUES (?, 'ETC', ?, NOW())`,
+                [member.member_id, points]
+            );
+        }
+
+        res.json({
+            success: true,
+            message: `${members.length}명의 회원에게 ${points}P 지급 완료`,
+            count: members.length
+        });
+    } catch (error) {
+        console.error('❌ 일괄 포인트 지급 실패:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        connection.release();
+    }
+});
+
 module.exports = router;
