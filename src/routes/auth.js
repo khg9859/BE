@@ -59,7 +59,7 @@ router.post('/login', async (req, res) => {
         status: member.status,
         role_type: member.role_type,
         matching_status: member.matching_status,
-        mypoints: member.mypoints
+        total_points: member.total_points || 0
       }
     });
   } catch (error) {
@@ -124,7 +124,7 @@ router.post('/register', async (req, res) => {
         contact: newMember[0].contact,
         department: newMember[0].department,
         grade: newMember[0].grade,
-        mypoints: newMember[0].mypoints
+        total_points: newMember[0].total_points || 0
       }
     });
   } catch (error) {
@@ -168,7 +168,7 @@ router.get('/me', async (req, res) => {
         status: member.status,
         role_type: member.role_type,
         matching_status: member.matching_status,
-        mypoints: member.mypoints
+        total_points: member.total_points || 0
       }
     });
   } catch (error) {
