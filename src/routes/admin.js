@@ -110,8 +110,8 @@ router.post('/add-points', async (req, res) => {
 
         // 성취 로그 추가
         await connection.query(
-            `INSERT INTO AchievementLog (member_id, source_type, points_earned, achieved_at) 
-             VALUES (?, 'ETC', ?, NOW())`,
+            `INSERT INTO AchievementLog (member_id, points_earned, achieved_at) 
+             VALUES (?, ?, NOW())`,
             [member_id, points]
         );
 
@@ -161,8 +161,8 @@ router.post('/add-points-all', async (req, res) => {
             );
 
             await connection.query(
-                `INSERT INTO AchievementLog (member_id, source_type, points_earned, achieved_at) 
-                 VALUES (?, 'ETC', ?, NOW())`,
+                `INSERT INTO AchievementLog (member_id, points_earned, achieved_at) 
+                 VALUES (?, ?, NOW())`,
                 [member.member_id, points]
             );
         }
