@@ -50,9 +50,14 @@ router.get('/logs/:memberId', async (req, res) => {
 router.post('/logs', async (req, res) => {
   try {
     const { member_id, food_id, meal_type, ate_at } = req.body;
+
+    // ISO 8601 날짜를 MySQL DATETIME 형식으로 변환
+    let ateAtDate = ate_at ? new Date(ate_at) : new Date();
+    const mysqlDateTime = ateAtDate.toISOString().slice(0, 19).replace('T', ' ');
+
     const [result] = await pool.query(
       'INSERT INTO DietLog (member_id, food_id, meal_type, ate_at) VALUES (?, ?, ?, ?)',
-      [member_id, food_id, meal_type, ate_at || new Date()]
+      [member_id, food_id, meal_type, mysqlDateTime]
     );
     res.status(201).json({
       diet_log_id: result.insertId,

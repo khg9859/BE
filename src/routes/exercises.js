@@ -50,9 +50,14 @@ router.get('/logs/:memberId', async (req, res) => {
 router.post('/logs', async (req, res) => {
   try {
     const { member_id, exercise_id, duration_minutes, performed_at } = req.body;
+
+    // ISO 8601 날짜를 MySQL DATETIME 형식으로 변환
+    let performedAtDate = performed_at ? new Date(performed_at) : new Date();
+    const mysqlDateTime = performedAtDate.toISOString().slice(0, 19).replace('T', ' ');
+
     const [result] = await pool.query(
       'INSERT INTO ExerciseLog (member_id, exercise_id, duration_minutes, performed_at) VALUES (?, ?, ?, ?)',
-      [member_id, exercise_id, duration_minutes, performed_at || new Date()]
+      [member_id, exercise_id, duration_minutes, mysqlDateTime]
     );
     res.status(201).json({
       exercise_log_id: result.insertId,
