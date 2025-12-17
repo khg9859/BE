@@ -409,4 +409,66 @@ router.post('/init-exercise-food-lists', async (req, res) => {
     }
 });
 
+// 중복 운동/음식 제거
+router.post('/remove-duplicates', async (req, res) => {
+    const connection = await pool.getConnection();
+    const results = [];
+
+    try {
+        console.log('🔧 중복 데이터 제거 시작...');
+
+        // ExerciseList 중복 제거 - 각 운동명의 첫 번째 것만 남기고 나머지 삭제
+        const [exercises] = await connection.query(
+            'SELECT name, MIN(exercise_id) as keep_id FROM ExerciseList GROUP BY name HAVING COUNT(*) > 1'
+        );
+
+        for (const exercise of exercises) {
+            const [result] = await connection.query(
+                'DELETE FROM ExerciseList WHERE name = ? AND exercise_id != ?',
+                [exercise.name, exercise.keep_id]
+            );
+            if (result.affectedRows > 0) {
+                results.push(`✅ ${exercise.name}: ${result.affectedRows}개 중복 제거`);
+            }
+        }
+
+        // FoodList 중복 제거
+        const [foods] = await connection.query(
+            'SELECT name, MIN(food_id) as keep_id FROM FoodList GROUP BY name HAVING COUNT(*) > 1'
+        );
+
+        for (const food of foods) {
+            const [result] = await connection.query(
+                'DELETE FROM FoodList WHERE name = ? AND food_id != ?',
+                [food.name, food.keep_id]
+            );
+            if (result.affectedRows > 0) {
+                results.push(`✅ ${food.name}: ${result.affectedRows}개 중복 제거`);
+            }
+        }
+
+        // 최종 카운트
+        const [exerciseCount] = await connection.query('SELECT COUNT(*) as count FROM ExerciseList');
+        const [foodCount] = await connection.query('SELECT COUNT(*) as count FROM FoodList');
+
+        results.push(`📊 최종 운동 개수: ${exerciseCount[0].count}개`);
+        results.push(`📊 최종 음식 개수: ${foodCount[0].count}개`);
+
+        res.json({
+            success: true,
+            message: '중복 데이터 제거 완료',
+            results: results
+        });
+    } catch (error) {
+        console.error('❌ 중복 제거 실패:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            results: results
+        });
+    } finally {
+        connection.release();
+    }
+});
+
 module.exports = router;
