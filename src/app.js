@@ -16,8 +16,10 @@ const allowedOrigins = [
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
+console.log('✅ Allowed CORS Origins:', allowedOrigins);
+
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -126,5 +128,5 @@ const startServer = async () => {
 startServer();
 
 module.exports = app;
- 
+
 
