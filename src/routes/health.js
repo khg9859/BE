@@ -32,6 +32,10 @@ router.post('/', async (req, res) => {
     // BMI 계산
     const bmi = (weight_kg / ((height_cm / 100) ** 2)).toFixed(1);
 
+    // ISO 8601 날짜를 MySQL DATE 형식으로 변환
+    let measuredAtDate = measured_at ? new Date(measured_at) : new Date();
+    const mysqlDate = measuredAtDate.toISOString().slice(0, 10); // YYYY-MM-DD
+
     const [result] = await pool.query(
       `INSERT INTO HealthRecord (member_id, height_cm, weight_kg, muscle_mass_kg, fat_mass_kg, bmi, measured_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -42,7 +46,7 @@ router.post('/', async (req, res) => {
         muscle_mass_kg || null,
         fat_mass_kg || null,
         bmi,
-        measured_at || new Date()
+        mysqlDate
       ]
     );
 
