@@ -244,4 +244,112 @@ router.post('/create-user-post-tables', async (req, res) => {
     }
 });
 
+// 운동/음식 리스트 초기화
+router.post('/init-exercise-food-lists', async (req, res) => {
+    const connection = await pool.getConnection();
+    const results = [];
+
+    try {
+        console.log('🔧 운동/음식 리스트 초기화 시작...');
+
+        // 운동 리스트 초기화
+        const exercises = [
+            // 가슴
+            ['벤치프레스', '가슴', 300, 'APPROVED'],
+            ['인클라인 벤치프레스', '가슴', 310, 'APPROVED'],
+            ['덤벨 플라이', '가슴', 280, 'APPROVED'],
+            ['푸쉬업', '가슴', 250, 'APPROVED'],
+            ['딥스', '가슴', 290, 'APPROVED'],
+            // 등
+            ['데드리프트', '등', 350, 'APPROVED'],
+            ['풀업', '등', 280, 'APPROVED'],
+            ['랫풀다운', '등', 260, 'APPROVED'],
+            ['바벨 로우', '등', 320, 'APPROVED'],
+            // 하체
+            ['스쿼트', '하체', 400, 'APPROVED'],
+            ['레그프레스', '하체', 320, 'APPROVED'],
+            ['런지', '하체', 350, 'APPROVED'],
+            // 어깨
+            ['숄더 프레스', '어깨', 290, 'APPROVED'],
+            ['사이드 레터럴 레이즈', '어깨', 240, 'APPROVED'],
+            // 팔
+            ['바벨 컬', '팔', 220, 'APPROVED'],
+            ['덤벨 컬', '팔', 210, 'APPROVED'],
+            ['트라이셉스 익스텐션', '팔', 230, 'APPROVED'],
+            // 복근
+            ['크런치', '복근', 200, 'APPROVED'],
+            ['플랭크', '복근', 180, 'APPROVED'],
+            // 유산소
+            ['런닝머신', '유산소', 500, 'APPROVED'],
+            ['사이클', '유산소', 400, 'APPROVED']
+        ];
+
+        for (const [name, category, calories, status] of exercises) {
+            await connection.query(
+                'INSERT INTO ExerciseList (name, category, calories_per_hour, status) VALUES (?, ?, ?, ?)',
+                [name, category, calories, status]
+            );
+        }
+        results.push(`✅ ${exercises.length}개의 운동 추가 완료`);
+
+        // 음식 리스트 초기화
+        const foods = [
+            // 단백질
+            ['닭가슴살 구이', '단백질', 165, 'APPROVED'],
+            ['닭가슴살 샐러드', '단백질', 250, 'APPROVED'],
+            ['연어 구이', '단백질', 280, 'APPROVED'],
+            ['참치 캔', '단백질', 120, 'APPROVED'],
+            ['소고기 스테이크', '단백질', 350, 'APPROVED'],
+            ['계란 3개', '단백질', 210, 'APPROVED'],
+            // 탄수화물
+            ['현미밥 1공기', '탄수화물', 300, 'APPROVED'],
+            ['백미밥 1공기', '탄수화물', 310, 'APPROVED'],
+            ['고구마 1개', '탄수화물', 130, 'APPROVED'],
+            ['감자 1개', '탄수화물', 110, 'APPROVED'],
+            ['귀리 오트밀', '탄수화물', 150, 'APPROVED'],
+            // 채소
+            ['그린 샐러드', '채소', 50, 'APPROVED'],
+            ['브로콜리', '채소', 55, 'APPROVED'],
+            ['시금치 나물', '채소', 40, 'APPROVED'],
+            // 과일
+            ['바나나 1개', '과일', 105, 'APPROVED'],
+            ['사과 1개', '과일', 95, 'APPROVED'],
+            ['블루베리 1컵', '과일', 85, 'APPROVED'],
+            // 유제품
+            ['그릭 요거트', '유제품', 130, 'APPROVED'],
+            ['저지방 우유', '유제품', 100, 'APPROVED'],
+            // 보충제
+            ['프로틴 쉐이크', '보충제', 120, 'APPROVED'],
+            ['프로틴 바', '보충제', 200, 'APPROVED'],
+            // 한식
+            ['김치찌개', '한식', 250, 'APPROVED'],
+            ['된장찌개', '한식', 180, 'APPROVED'],
+            ['비빔밥', '한식', 550, 'APPROVED']
+        ];
+
+        for (const [name, category, calories, status] of foods) {
+            await connection.query(
+                'INSERT INTO FoodList (name, category, calories, status) VALUES (?, ?, ?, ?)',
+                [name, category, calories, status]
+            );
+        }
+        results.push(`✅ ${foods.length}개의 음식 추가 완료`);
+
+        res.json({
+            success: true,
+            message: '운동/음식 리스트 초기화 완료',
+            results: results
+        });
+    } catch (error) {
+        console.error('❌ 초기화 실패:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            results: results
+        });
+    } finally {
+        connection.release();
+    }
+});
+
 module.exports = router;
