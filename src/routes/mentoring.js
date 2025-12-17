@@ -24,14 +24,24 @@ router.post('/mentors/posts', async (req, res) => {
   try {
     const { member_id, title, description, career, specialty, mentor_contact } = req.body;
 
-    // 이미 작성한 글이 있는지 확인
-    const [existing] = await pool.query(
+    // 이미 멘토 글을 작성했는지 확인
+    const [existingMentor] = await pool.query(
       'SELECT * FROM MentorPost WHERE member_id = ?',
       [member_id]
     );
 
-    if (existing.length > 0) {
-      return res.status(400).json({ error: '이미 등록된 모집글이 있습니다.' });
+    if (existingMentor.length > 0) {
+      return res.status(400).json({ error: '이미 등록된 멘토 모집글이 있습니다.' });
+    }
+
+    // 멘티 글을 작성했는지 확인
+    const [existingMentee] = await pool.query(
+      'SELECT * FROM MenteePost WHERE member_id = ?',
+      [member_id]
+    );
+
+    if (existingMentee.length > 0) {
+      return res.status(400).json({ error: '멘티 모집글을 작성한 사용자는 멘토 모집글을 작성할 수 없습니다.' });
     }
 
     const [result] = await pool.query(
@@ -80,14 +90,24 @@ router.post('/mentees/posts', async (req, res) => {
   try {
     const { member_id, title, description, goal, interest, mentee_contact } = req.body;
 
-    // 이미 작성한 글이 있는지 확인
-    const [existing] = await pool.query(
+    // 이미 멘티 글을 작성했는지 확인
+    const [existingMentee] = await pool.query(
       'SELECT * FROM MenteePost WHERE member_id = ?',
       [member_id]
     );
 
-    if (existing.length > 0) {
-      return res.status(400).json({ error: '이미 등록된 모집글이 있습니다.' });
+    if (existingMentee.length > 0) {
+      return res.status(400).json({ error: '이미 등록된 멘티 모집글이 있습니다.' });
+    }
+
+    // 멘토 글을 작성했는지 확인
+    const [existingMentor] = await pool.query(
+      'SELECT * FROM MentorPost WHERE member_id = ?',
+      [member_id]
+    );
+
+    if (existingMentor.length > 0) {
+      return res.status(400).json({ error: '멘토 모집글을 작성한 사용자는 멘티 모집글을 작성할 수 없습니다.' });
     }
 
     const [result] = await pool.query(
