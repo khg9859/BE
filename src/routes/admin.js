@@ -170,4 +170,78 @@ router.post('/add-points-all', async (req, res) => {
     }
 });
 
+// 사용자 게시글 테이블 생성
+router.post('/create-user-post-tables', async (req, res) => {
+    const connection = await pool.getConnection();
+    const results = [];
+
+    try {
+        console.log('🔧 사용자 게시글 테이블 생성 시작...');
+
+        // 1. UserPost 테이블 생성
+        try {
+            await connection.query(`
+        CREATE TABLE IF NOT EXISTS UserPost (
+          post_id INT PRIMARY KEY AUTO_INCREMENT,
+          member_id INT NOT NULL,
+          post_type ENUM('workout', 'diet') NOT NULL,
+          title VARCHAR(200) NOT NULL,
+          content TEXT,
+          category VARCHAR(50),
+          data JSON COMMENT '운동/식단 상세 데이터',
+          created_at DATETIME NOT NULL DEFAULT NOW(),
+          CONSTRAINT FK_UserPost_Member FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE,
+          INDEX idx_post_type (post_type),
+          INDEX idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+            results.push('✅ UserPost 테이블 생성 완료');
+        } catch (error) {
+            if (error.code === 'ER_TABLE_EXISTS_ERROR') {
+                results.push('ℹ️ UserPost 테이블이 이미 존재합니다');
+            } else {
+                throw error;
+            }
+        }
+
+        // 2. UserPostLike 테이블 생성
+        try {
+            await connection.query(`
+        CREATE TABLE IF NOT EXISTS UserPostLike (
+          like_id INT PRIMARY KEY AUTO_INCREMENT,
+          post_id INT NOT NULL,
+          member_id INT NOT NULL,
+          created_at DATETIME NOT NULL DEFAULT NOW(),
+          CONSTRAINT FK_UserPostLike_Post FOREIGN KEY (post_id) REFERENCES UserPost(post_id) ON DELETE CASCADE,
+          CONSTRAINT FK_UserPostLike_Member FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE,
+          UNIQUE KEY unique_post_member (post_id, member_id),
+          INDEX idx_member (member_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+            results.push('✅ UserPostLike 테이블 생성 완료');
+        } catch (error) {
+            if (error.code === 'ER_TABLE_EXISTS_ERROR') {
+                results.push('ℹ️ UserPostLike 테이블이 이미 존재합니다');
+            } else {
+                throw error;
+            }
+        }
+
+        res.json({
+            success: true,
+            message: '사용자 게시글 테이블 생성 완료',
+            results: results
+        });
+    } catch (error) {
+        console.error('❌ 테이블 생성 실패:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            results: results
+        });
+    } finally {
+        connection.release();
+    }
+});
+
 module.exports = router;

@@ -84,4 +84,168 @@ router.get('/diets/:id', async (req, res) => {
   }
 });
 
+// ========== 사용자 게시글 API ==========
+
+// 사용자 운동 루틴 게시글 조회
+router.get('/user-workouts', async (req, res) => {
+  try {
+    const [posts] = await pool.query(`
+      SELECT p.*, m.name as author_name,
+        (SELECT COUNT(*) FROM UserPostLike WHERE post_id = p.post_id) as likes
+      FROM UserPost p
+      JOIN Member m ON p.member_id = m.member_id
+      WHERE p.post_type = 'workout'
+      ORDER BY p.created_at DESC
+    `);
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 사용자 식단 게시글 조회
+router.get('/user-diets', async (req, res) => {
+  try {
+    const [posts] = await pool.query(`
+      SELECT p.*, m.name as author_name,
+        (SELECT COUNT(*) FROM UserPostLike WHERE post_id = p.post_id) as likes
+      FROM UserPost p
+      JOIN Member m ON p.member_id = m.member_id
+      WHERE p.post_type = 'diet'
+      ORDER BY p.created_at DESC
+    `);
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 사용자 게시글 작성
+router.post('/user-posts', async (req, res) => {
+  try {
+    const { member_id, post_type, title, content, category, data } = req.body;
+
+    const [result] = await pool.query(
+      `INSERT INTO UserPost (member_id, post_type, title, content, category, data, created_at) 
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [member_id, post_type, title, content, category, JSON.stringify(data)]
+    );
+
+    res.status(201).json({
+      post_id: result.insertId,
+      message: '게시글이 작성되었습니다.'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 사용자 게시글 삭제
+router.delete('/user-posts/:postId', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { member_id } = req.query;
+
+    // 작성자 확인
+    const [post] = await pool.query(
+      'SELECT member_id FROM UserPost WHERE post_id = ?',
+      [postId]
+    );
+
+    if (post.length === 0) {
+      return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+    }
+
+    if (post[0].member_id !== parseInt(member_id)) {
+      return res.status(403).json({ error: '삭제 권한이 없습니다.' });
+    }
+
+    // 좋아요 먼저 삭제
+    await pool.query('DELETE FROM UserPostLike WHERE post_id = ?', [postId]);
+
+    // 게시글 삭제
+    await pool.query('DELETE FROM UserPost WHERE post_id = ?', [postId]);
+
+    res.json({ message: '게시글이 삭제되었습니다.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 좋아요 추가
+router.post('/user-posts/:postId/like', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { member_id } = req.body;
+
+    // 이미 좋아요 했는지 확인
+    const [existing] = await pool.query(
+      'SELECT * FROM UserPostLike WHERE post_id = ? AND member_id = ?',
+      [postId, member_id]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: '이미 좋아요를 누른 게시글입니다.' });
+    }
+
+    // 좋아요 추가
+    await pool.query(
+      'INSERT INTO UserPostLike (post_id, member_id, created_at) VALUES (?, ?, NOW())',
+      [postId, member_id]
+    );
+
+    // 좋아요 수 조회
+    const [likes] = await pool.query(
+      'SELECT COUNT(*) as count FROM UserPostLike WHERE post_id = ?',
+      [postId]
+    );
+
+    res.json({
+      message: '좋아요가 추가되었습니다.',
+      likes: likes[0].count
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 좋아요 취소
+router.delete('/user-posts/:postId/like', async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { member_id } = req.query;
+
+    await pool.query(
+      'DELETE FROM UserPostLike WHERE post_id = ? AND member_id = ?',
+      [postId, member_id]
+    );
+
+    // 좋아요 수 조회
+    const [likes] = await pool.query(
+      'SELECT COUNT(*) as count FROM UserPostLike WHERE post_id = ?',
+      [postId]
+    );
+
+    res.json({
+      message: '좋아요가 취소되었습니다.',
+      likes: likes[0].count
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 사용자가 좋아요한 게시글 목록
+router.get('/user-posts/liked/:memberId', async (req, res) => {
+  try {
+    const [liked] = await pool.query(
+      'SELECT post_id FROM UserPostLike WHERE member_id = ?',
+      [req.params.memberId]
+    );
+    res.json(liked.map(l => l.post_id));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
