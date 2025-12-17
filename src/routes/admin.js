@@ -252,6 +252,32 @@ router.post('/init-exercise-food-lists', async (req, res) => {
     try {
         console.log('🔧 운동/음식 리스트 초기화 시작...');
 
+        // ExerciseList에 category 컬럼 추가
+        try {
+            await connection.query(`
+                ALTER TABLE ExerciseList 
+                ADD COLUMN IF NOT EXISTS category VARCHAR(50)
+            `);
+            results.push('✅ ExerciseList.category 컬럼 추가');
+        } catch (error) {
+            if (error.code !== 'ER_DUP_FIELDNAME') {
+                console.error('ExerciseList category 추가 실패:', error);
+            }
+        }
+
+        // FoodList에 category 컬럼 추가
+        try {
+            await connection.query(`
+                ALTER TABLE FoodList 
+                ADD COLUMN IF NOT EXISTS category VARCHAR(50)
+            `);
+            results.push('✅ FoodList.category 컬럼 추가');
+        } catch (error) {
+            if (error.code !== 'ER_DUP_FIELDNAME') {
+                console.error('FoodList category 추가 실패:', error);
+            }
+        }
+
         // 운동 리스트 초기화
         const exercises = [
             // 가슴
