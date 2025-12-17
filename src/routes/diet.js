@@ -54,8 +54,14 @@ router.post('/logs', async (req, res) => {
 
     const { member_id, food_id, meal_type, ate_at } = req.body;
 
-    // ISO 8601 날짜를 MySQL DATETIME 형식으로 변환
+    // ISO 8601 날짜를 MySQL DATETIME 형식으로 변환 (한국 시간대 고려)
     let ateAtDate = ate_at ? new Date(ate_at) : new Date();
+
+    // UTC 시간을 한국 시간(UTC+9)으로 변환
+    const koreaOffset = 9 * 60; // 9시간을 분으로
+    const localOffset = ateAtDate.getTimezoneOffset(); // 로컬 시간대 오프셋
+    ateAtDate = new Date(ateAtDate.getTime() + (koreaOffset + localOffset) * 60 * 1000);
+
     const mysqlDateTime = ateAtDate.toISOString().slice(0, 19).replace('T', ' ');
 
     const [result] = await connection.query(

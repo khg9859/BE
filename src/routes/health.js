@@ -32,8 +32,14 @@ router.post('/', async (req, res) => {
     // BMI 계산
     const bmi = (weight_kg / ((height_cm / 100) ** 2)).toFixed(1);
 
-    // ISO 8601 날짜를 MySQL DATE 형식으로 변환
+    // ISO 8601 날짜를 MySQL DATE 형식으로 변환 (한국 시간대 고려)
     let measuredAtDate = measured_at ? new Date(measured_at) : new Date();
+
+    // UTC 시간을 한국 시간(UTC+9)으로 변환
+    const koreaOffset = 9 * 60; // 9시간을 분으로
+    const localOffset = measuredAtDate.getTimezoneOffset(); // 로컬 시간대 오프셋
+    measuredAtDate = new Date(measuredAtDate.getTime() + (koreaOffset + localOffset) * 60 * 1000);
+
     const mysqlDate = measuredAtDate.toISOString().slice(0, 10); // YYYY-MM-DD
 
     const [result] = await pool.query(
