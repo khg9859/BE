@@ -21,9 +21,9 @@ router.get('/:memberId', async (req, res) => {
 // 건강 기록 추가
 router.post('/', async (req, res) => {
   try {
-    const { member_id, height_cm, weight_kg, muscle_mass_kg, fat_mass_kg, measured_at } = req.body;
+    const { member_id, height_cm, weight_kg, muscle_mass_kg, body_fat_percent, measured_at } = req.body;
 
-    console.log('건강 기록 추가 요청:', { member_id, height_cm, weight_kg, muscle_mass_kg, fat_mass_kg, measured_at });
+    console.log('건강 기록 추가 요청:', { member_id, height_cm, weight_kg, muscle_mass_kg, body_fat_percent, measured_at });
 
     if (!member_id || !height_cm || !weight_kg) {
       return res.status(400).json({ error: '필수 정보를 모두 입력해주세요.' });
@@ -37,14 +37,14 @@ router.post('/', async (req, res) => {
     const mysqlDate = measuredAtDate.toISOString().slice(0, 10); // YYYY-MM-DD
 
     const [result] = await pool.query(
-      `INSERT INTO HealthRecord (member_id, height_cm, weight_kg, muscle_mass_kg, fat_mass_kg, bmi, measured_at)
+      `INSERT INTO HealthRecord (member_id, height_cm, weight_kg, muscle_mass_kg, body_fat_percent, bmi, measured_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         member_id,
         height_cm,
         weight_kg,
         muscle_mass_kg || null,
-        fat_mass_kg || null,
+        body_fat_percent || null,
         bmi,
         mysqlDate
       ]
