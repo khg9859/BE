@@ -256,12 +256,14 @@ router.post('/init-exercise-food-lists', async (req, res) => {
         try {
             await connection.query(`
                 ALTER TABLE ExerciseList 
-                ADD COLUMN IF NOT EXISTS category VARCHAR(50)
+                ADD COLUMN category VARCHAR(50)
             `);
             results.push('✅ ExerciseList.category 컬럼 추가');
         } catch (error) {
-            if (error.code !== 'ER_DUP_FIELDNAME') {
-                console.error('ExerciseList category 추가 실패:', error);
+            if (error.code === 'ER_DUP_FIELDNAME') {
+                results.push('ℹ️ ExerciseList.category 컬럼이 이미 존재');
+            } else {
+                throw error;
             }
         }
 
@@ -269,12 +271,14 @@ router.post('/init-exercise-food-lists', async (req, res) => {
         try {
             await connection.query(`
                 ALTER TABLE FoodList 
-                ADD COLUMN IF NOT EXISTS category VARCHAR(50)
+                ADD COLUMN category VARCHAR(50)
             `);
             results.push('✅ FoodList.category 컬럼 추가');
         } catch (error) {
-            if (error.code !== 'ER_DUP_FIELDNAME') {
-                console.error('FoodList category 추가 실패:', error);
+            if (error.code === 'ER_DUP_FIELDNAME') {
+                results.push('ℹ️ FoodList.category 컬럼이 이미 존재');
+            } else {
+                throw error;
             }
         }
 
