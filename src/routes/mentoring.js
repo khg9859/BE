@@ -224,8 +224,11 @@ router.post('/apply', async (req, res) => {
 
 // 멘토링 신청 수락
 router.put('/accept/:mentoringId', async (req, res) => {
+  const connection = await pool.getConnection();
   try {
-    const [mentoring] = await pool.query(
+    await connection.beginTransaction();
+
+    const [mentoring] = await connection.query(
       'SELECT * FROM Mentoring WHERE mentoring_id = ?',
       [req.params.mentoringId]
     );
@@ -234,23 +237,86 @@ router.put('/accept/:mentoringId', async (req, res) => {
       return res.status(404).json({ error: '신청을 찾을 수 없습니다.' });
     }
 
-    await pool.query(
+    await connection.query(
       'UPDATE Mentoring SET status = "ACTIVE", matched_at = NOW() WHERE mentoring_id = ?',
       [req.params.mentoringId]
     );
 
     // Member 테이블의 matching_status 업데이트
     const { mentor_id, mentee_id } = mentoring[0];
-    await pool.query(
+    await connection.query(
       'UPDATE Member SET matching_status = "MATCHED" WHERE member_id IN (?, ?)',
       [mentor_id, mentee_id]
     );
 
+    // 멘토와 멘티 모두에게 멘토링 퀘스트 진행도 업데이트
+    await checkAndCompleteQuests(connection, mentor_id, 'MENTORING');
+    await checkAndCompleteQuests(connection, mentee_id, 'MENTORING');
+
+    await connection.commit();
+
     res.json({ message: '매칭이 완료되었습니다.' });
   } catch (error) {
+    await connection.rollback();
     res.status(500).json({ error: error.message });
+  } finally {
+    connection.release();
   }
 });
+
+// 퀘스트 체크 및 완료 함수
+async function checkAndCompleteQuests(connection, member_id, quest_type) {
+  const [quests] = await connection.query(
+    `SELECT q.*, IFNULL(mq.current_progress, 0) as current_progress,
+            IFNULL(mq.is_completed, 0) as is_completed, mq.member_quest_id
+     FROM Quest q
+     LEFT JOIN MemberQuest mq ON q.quest_id = mq.quest_id AND mq.member_id = ?
+     WHERE q.quest_type = ? AND (mq.is_completed = 0 OR mq.is_completed IS NULL)
+     ORDER BY q.target_value`,
+    [member_id, quest_type]
+  );
+
+  let totalPointsEarned = 0;
+
+  for (const quest of quests) {
+    let newProgress = quest.current_progress + 1;
+
+    if (quest.member_quest_id) {
+      await connection.query(
+        'UPDATE MemberQuest SET current_progress = ? WHERE member_quest_id = ?',
+        [newProgress, quest.member_quest_id]
+      );
+    } else {
+      await connection.query(
+        'INSERT INTO MemberQuest (member_id, quest_id, current_progress) VALUES (?, ?, ?)',
+        [member_id, quest.quest_id, newProgress]
+      );
+    }
+
+    if (newProgress >= quest.target_value) {
+      if (quest.member_quest_id) {
+        await connection.query(
+          'UPDATE MemberQuest SET is_completed = 1, completed_at = NOW() WHERE member_quest_id = ?',
+          [quest.member_quest_id]
+        );
+      } else {
+        await connection.query(
+          'UPDATE MemberQuest SET is_completed = 1, completed_at = NOW() WHERE member_id = ? AND quest_id = ?',
+          [member_id, quest.quest_id]
+        );
+      }
+
+      await connection.query(
+        'UPDATE Member SET total_points = total_points + ? WHERE member_id = ?',
+        [quest.points_reward, member_id]
+      );
+
+      totalPointsEarned += quest.points_reward;
+    }
+  }
+
+  return { totalPointsEarned };
+}
 
 // 멘토링 신청 거절
 router.delete('/reject/:mentoringId', async (req, res) => {

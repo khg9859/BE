@@ -63,8 +63,24 @@ router.put('/:goalId/achieve', async (req, res) => {
 
 // 목표 수정 (is_achieved 토글 포함)
 router.put('/:goalId', async (req, res) => {
+  const connection = await pool.getConnection();
   try {
+    await connection.beginTransaction();
+
     const { item_name, target_date, is_achieved } = req.body;
+
+    // 기존 목표 정보 조회
+    const [existingGoal] = await connection.query(
+      'SELECT * FROM Goal WHERE goal_id = ?',
+      [req.params.goalId]
+    );
+
+    if (existingGoal.length === 0) {
+      return res.status(404).json({ error: '목표를 찾을 수 없습니다.' });
+    }
+
+    const wasAchieved = existingGoal[0].is_achieved;
+    const nowAchieved = is_achieved !== undefined ? is_achieved : wasAchieved;
 
     // 동적 쿼리 생성
     const updates = [];
@@ -89,19 +105,80 @@ router.put('/:goalId', async (req, res) => {
 
     values.push(req.params.goalId);
 
-    const [result] = await pool.query(
+    const [result] = await connection.query(
       `UPDATE Goal SET ${updates.join(', ')} WHERE goal_id = ?`,
       values
     );
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: '목표를 찾을 수 없습니다.' });
+    // 목표가 새로 달성된 경우 퀘스트 업데이트
+    if (!wasAchieved && nowAchieved) {
+      await checkAndCompleteQuests(connection, existingGoal[0].member_id, 'GOAL');
     }
+
+    await connection.commit();
+
     res.json({ message: '목표가 수정되었습니다.' });
   } catch (error) {
+    await connection.rollback();
     res.status(500).json({ error: error.message });
+  } finally {
+    connection.release();
   }
 });
+
+// 퀘스트 체크 및 완료 함수
+async function checkAndCompleteQuests(connection, member_id, quest_type) {
+  const [quests] = await connection.query(
+    `SELECT q.*, IFNULL(mq.current_progress, 0) as current_progress,
+            IFNULL(mq.is_completed, 0) as is_completed, mq.member_quest_id
+     FROM Quest q
+     LEFT JOIN MemberQuest mq ON q.quest_id = mq.quest_id AND mq.member_id = ?
+     WHERE q.quest_type = ? AND (mq.is_completed = 0 OR mq.is_completed IS NULL)
+     ORDER BY q.target_value`,
+    [member_id, quest_type]
+  );
+
+  let totalPointsEarned = 0;
+
+  for (const quest of quests) {
+    let newProgress = quest.current_progress + 1;
+
+    if (quest.member_quest_id) {
+      await connection.query(
+        'UPDATE MemberQuest SET current_progress = ? WHERE member_quest_id = ?',
+        [newProgress, quest.member_quest_id]
+      );
+    } else {
+      await connection.query(
+        'INSERT INTO MemberQuest (member_id, quest_id, current_progress) VALUES (?, ?, ?)',
+        [member_id, quest.quest_id, newProgress]
+      );
+    }
+
+    if (newProgress >= quest.target_value) {
+      if (quest.member_quest_id) {
+        await connection.query(
+          'UPDATE MemberQuest SET is_completed = 1, completed_at = NOW() WHERE member_quest_id = ?',
+          [quest.member_quest_id]
+        );
+      } else {
+        await connection.query(
+          'UPDATE MemberQuest SET is_completed = 1, completed_at = NOW() WHERE member_id = ? AND quest_id = ?',
+          [member_id, quest.quest_id]
+        );
+      }
+
+      await connection.query(
+        'UPDATE Member SET total_points = total_points + ? WHERE member_id = ?',
+        [quest.points_reward, member_id]
+      );
+
+      totalPointsEarned += quest.points_reward;
+    }
+  }
+
+  return { totalPointsEarned };
+}
 
 // 목표 삭제
 router.delete('/:goalId', async (req, res) => {
