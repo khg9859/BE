@@ -31,7 +31,9 @@ router.get('/list/category/:category', async (req, res) => {
 router.get('/logs/:memberId', async (req, res) => {
   try {
     const [logs] = await pool.query(
-      `SELECT el.*, ex.name, ex.category, ex.calories_per_hour
+      `SELECT el.log_id as exercise_log_id, el.member_id, el.exercise_id, el.performed_at, 
+              el.sets, el.reps, el.weight_kg, el.duration_minutes, el.calories_burned,
+              ex.name as exercise_name, ex.category, ex.calories_per_hour
        FROM ExerciseLog el
        JOIN ExerciseList ex ON el.exercise_id = ex.exercise_id
        WHERE el.member_id = ?
@@ -65,7 +67,7 @@ router.post('/logs', async (req, res) => {
 router.delete('/logs/:logId', async (req, res) => {
   try {
     const [result] = await pool.query(
-      'DELETE FROM ExerciseLog WHERE exercise_log_id = ?',
+      'DELETE FROM ExerciseLog WHERE log_id = ?',
       [req.params.logId]
     );
     if (result.affectedRows === 0) {
@@ -81,7 +83,9 @@ router.delete('/logs/:logId', async (req, res) => {
 router.get('/logs/:memberId/date/:date', async (req, res) => {
   try {
     const [logs] = await pool.query(
-      `SELECT el.*, ex.name, ex.category, ex.calories_per_hour
+      `SELECT el.log_id as exercise_log_id, el.member_id, el.exercise_id, el.performed_at,
+              el.sets, el.reps, el.weight_kg, el.duration_minutes, el.calories_burned,
+              ex.name as exercise_name, ex.category, ex.calories_per_hour
        FROM ExerciseLog el
        JOIN ExerciseList ex ON el.exercise_id = ex.exercise_id
        WHERE el.member_id = ? AND DATE(el.performed_at) = ?

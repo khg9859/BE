@@ -31,7 +31,9 @@ router.get('/list/category/:category', async (req, res) => {
 router.get('/logs/:memberId', async (req, res) => {
   try {
     const [logs] = await pool.query(
-      `SELECT dl.*, f.name, f.category, f.calories_per_serving as calories
+      `SELECT dl.log_id as diet_log_id, dl.member_id, dl.food_id, dl.ate_at, dl.meal_type,
+              dl.amount, dl.image_url,
+              f.name as food_name, f.category, f.calories_per_serving as calories
        FROM DietLog dl
        JOIN FoodList f ON dl.food_id = f.food_id
        WHERE dl.member_id = ?
@@ -65,7 +67,7 @@ router.post('/logs', async (req, res) => {
 router.delete('/logs/:logId', async (req, res) => {
   try {
     const [result] = await pool.query(
-      'DELETE FROM DietLog WHERE diet_log_id = ?',
+      'DELETE FROM DietLog WHERE log_id = ?',
       [req.params.logId]
     );
     if (result.affectedRows === 0) {
@@ -81,7 +83,9 @@ router.delete('/logs/:logId', async (req, res) => {
 router.get('/logs/:memberId/date/:date', async (req, res) => {
   try {
     const [logs] = await pool.query(
-      `SELECT dl.*, f.name, f.category, f.calories_per_serving as calories
+      `SELECT dl.log_id as diet_log_id, dl.member_id, dl.food_id, dl.ate_at, dl.meal_type,
+              dl.amount, dl.image_url,
+              f.name as food_name, f.category, f.calories_per_serving as calories
        FROM DietLog dl
        JOIN FoodList f ON dl.food_id = f.food_id
        WHERE dl.member_id = ? AND DATE(dl.ate_at) = ?
