@@ -6,7 +6,7 @@ const { pool } = require('../config/database');
 router.get('/list', async (req, res) => {
   try {
     const [foods] = await pool.query(
-      'SELECT * FROM FoodList WHERE status = "APPROVED" ORDER BY name'
+      'SELECT food_id, name, serving_size_g, calories_per_serving as calories, category, status FROM FoodList WHERE status = "APPROVED" ORDER BY name'
     );
     res.json(foods);
   } catch (error) {
@@ -18,7 +18,7 @@ router.get('/list', async (req, res) => {
 router.get('/list/category/:category', async (req, res) => {
   try {
     const [foods] = await pool.query(
-      'SELECT * FROM FoodList WHERE category = ? AND status = "APPROVED"',
+      'SELECT food_id, name, serving_size_g, calories_per_serving as calories, category, status FROM FoodList WHERE category = ? AND status = "APPROVED"',
       [req.params.category]
     );
     res.json(foods);
@@ -31,7 +31,7 @@ router.get('/list/category/:category', async (req, res) => {
 router.get('/logs/:memberId', async (req, res) => {
   try {
     const [logs] = await pool.query(
-      `SELECT dl.*, f.name, f.category, f.calories
+      `SELECT dl.*, f.name, f.category, f.calories_per_serving as calories
        FROM DietLog dl
        JOIN FoodList f ON dl.food_id = f.food_id
        WHERE dl.member_id = ?
@@ -81,7 +81,7 @@ router.delete('/logs/:logId', async (req, res) => {
 router.get('/logs/:memberId/date/:date', async (req, res) => {
   try {
     const [logs] = await pool.query(
-      `SELECT dl.*, f.name, f.category, f.calories
+      `SELECT dl.*, f.name, f.category, f.calories_per_serving as calories
        FROM DietLog dl
        JOIN FoodList f ON dl.food_id = f.food_id
        WHERE dl.member_id = ? AND DATE(dl.ate_at) = ?

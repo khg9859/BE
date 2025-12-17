@@ -282,6 +282,9 @@ router.post('/init-exercise-food-lists', async (req, res) => {
             }
         }
 
+        // FoodList 테이블 확인 (calories_per_serving 컬럼 사용)
+        results.push('ℹ️ FoodList는 calories_per_serving 컬럼 사용');
+
         // 운동 리스트 초기화
         const exercises = [
             // 가슴
@@ -322,48 +325,72 @@ router.post('/init-exercise-food-lists', async (req, res) => {
         }
         results.push(`✅ ${exercises.length}개의 운동 추가 완료`);
 
-        // 음식 리스트 초기화
-        const foods = [
-            // 단백질
-            ['닭가슴살 구이', '단백질', 165, 'APPROVED'],
-            ['닭가슴살 샐러드', '단백질', 250, 'APPROVED'],
-            ['연어 구이', '단백질', 280, 'APPROVED'],
-            ['참치 캔', '단백질', 120, 'APPROVED'],
-            ['소고기 스테이크', '단백질', 350, 'APPROVED'],
-            ['계란 3개', '단백질', 210, 'APPROVED'],
-            // 탄수화물
-            ['현미밥 1공기', '탄수화물', 300, 'APPROVED'],
-            ['백미밥 1공기', '탄수화물', 310, 'APPROVED'],
-            ['고구마 1개', '탄수화물', 130, 'APPROVED'],
-            ['감자 1개', '탄수화물', 110, 'APPROVED'],
-            ['귀리 오트밀', '탄수화물', 150, 'APPROVED'],
-            // 채소
-            ['그린 샐러드', '채소', 50, 'APPROVED'],
-            ['브로콜리', '채소', 55, 'APPROVED'],
-            ['시금치 나물', '채소', 40, 'APPROVED'],
-            // 과일
-            ['바나나 1개', '과일', 105, 'APPROVED'],
-            ['사과 1개', '과일', 95, 'APPROVED'],
-            ['블루베리 1컵', '과일', 85, 'APPROVED'],
-            // 유제품
-            ['그릭 요거트', '유제품', 130, 'APPROVED'],
-            ['저지방 우유', '유제품', 100, 'APPROVED'],
-            // 보충제
-            ['프로틴 쉐이크', '보충제', 120, 'APPROVED'],
-            ['프로틴 바', '보충제', 200, 'APPROVED'],
-            // 한식
-            ['김치찌개', '한식', 250, 'APPROVED'],
-            ['된장찌개', '한식', 180, 'APPROVED'],
-            ['비빔밥', '한식', 550, 'APPROVED']
+        // 음식 리스트 초기화 (기존 음식에 카테고리 업데이트)
+        const foodUpdates = [
+            ['닭가슴살', '단백질'],
+            ['계란', '단백질'],
+            ['연어', '단백질'],
+            ['현미밥', '탄수화물'],
+            ['고구마', '탄수화물'],
+            ['바나나', '과일'],
+            ['아보카도', '과일'],
+            ['아몬드', '보충제'],
+            ['브로콜리', '채소'],
+            ['시금치', '채소']
         ];
 
-        for (const [name, category, calories, status] of foods) {
-            await connection.query(
-                'INSERT INTO FoodList (name, calories, category, status) VALUES (?, ?, ?, ?)',
-                [name, calories, category, status]
+        let updateCount = 0;
+        for (const [name, category] of foodUpdates) {
+            const [result] = await connection.query(
+                'UPDATE FoodList SET category = ? WHERE name = ?',
+                [category, name]
             );
+            if (result.affectedRows > 0) {
+                updateCount++;
+            }
         }
-        results.push(`✅ ${foods.length}개의 음식 추가 완료`);
+        results.push(`✅ ${updateCount}개의 음식 카테고리 업데이트 완료`);
+
+        // 추가 음식 삽입 (기존에 없는 것만)
+        const newFoods = [
+            ['닭가슴살 구이', 100, 165, '단백질', 'APPROVED'],
+            ['닭가슴살 샐러드', 200, 250, '단백질', 'APPROVED'],
+            ['연어 구이', 150, 280, '단백질', 'APPROVED'],
+            ['참치 캔', 100, 120, '단백질', 'APPROVED'],
+            ['소고기 스테이크', 200, 350, '단백질', 'APPROVED'],
+            ['계란 3개', 150, 210, '단백질', 'APPROVED'],
+            ['백미밥 1공기', 200, 310, '탄수화물', 'APPROVED'],
+            ['감자 1개', 150, 110, '탄수화물', 'APPROVED'],
+            ['귀리 오트밀', 100, 150, '탄수화물', 'APPROVED'],
+            ['그린 샐러드', 150, 50, '채소', 'APPROVED'],
+            ['시금치 나물', 100, 40, '채소', 'APPROVED'],
+            ['사과 1개', 150, 95, '과일', 'APPROVED'],
+            ['블루베리 1컵', 150, 85, '과일', 'APPROVED'],
+            ['그릭 요거트', 150, 130, '유제품', 'APPROVED'],
+            ['저지방 우유', 200, 100, '유제품', 'APPROVED'],
+            ['프로틴 쉐이크', 250, 120, '보충제', 'APPROVED'],
+            ['프로틴 바', 60, 200, '보충제', 'APPROVED'],
+            ['김치찌개', 300, 250, '한식', 'APPROVED'],
+            ['된장찌개', 300, 180, '한식', 'APPROVED'],
+            ['비빔밥', 400, 550, '한식', 'APPROVED']
+        ];
+
+        let insertCount = 0;
+        for (const [name, serving_size, calories, category, status] of newFoods) {
+            try {
+                await connection.query(
+                    'INSERT INTO FoodList (name, serving_size_g, calories_per_serving, category, status) VALUES (?, ?, ?, ?, ?)',
+                    [name, serving_size, calories, category, status]
+                );
+                insertCount++;
+            } catch (error) {
+                // 중복 키 에러는 무시 (이미 존재하는 음식)
+                if (error.code !== 'ER_DUP_ENTRY') {
+                    console.error(`음식 추가 실패 (${name}):`, error.message);
+                }
+            }
+        }
+        results.push(`✅ ${insertCount}개의 새 음식 추가 완료`);
 
         res.json({
             success: true,
